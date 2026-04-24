@@ -1,4 +1,196 @@
-<script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marie's Creative Classroom</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --neon-pink: #FF0055;
+            --neon-blue: #00FFCC;
+            --bg-dark: #121212;
+            --panel-bg: #1e1e1e;
+            --accent: #FFCC00;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; padding: 0;
+            font-family: "Comic Sans MS", "Chalkboard SE", cursive, sans-serif;
+            background-color: var(--bg-dark);
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .screen {
+            position: absolute;
+            inset: 0;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .active { display: flex; }
+
+        .card {
+            background: var(--panel-bg);
+            padding: 30px;
+            border-radius: 20px;
+            border: 4px solid var(--neon-blue);
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.3);
+            text-align: center;
+            width: 90%;
+            max-width: 800px;
+        }
+
+        h1 { font-size: 3.5rem; margin-top: 0; color: var(--neon-pink); text-shadow: 3px 3px #000; }
+        h2 { font-size: 1.2rem; opacity: 0.8; margin-bottom: 20px; }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            width: 100%;
+        }
+
+        .btn {
+            padding: 20px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            border: none;
+            border-radius: 15px;
+            background: var(--neon-pink);
+            color: white;
+            transition: 0.2s;
+            font-family: inherit;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn:hover { transform: scale(1.05); box-shadow: 0 0 15px var(--neon-pink); }
+        .btn-small { padding: 10px 20px; font-size: 1rem; background: #444; border:none; color:white; border-radius:10px; cursor:pointer;}
+
+        .theme-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .theme-item {
+            padding: 15px;
+            background: #252525;
+            border: 2px solid #444;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        .theme-item:hover { border-color: var(--neon-blue); background: #333; }
+
+        canvas { max-width: 100%; max-height: 60vh; border-radius: 10px; background: #000; }
+        
+        .game-controls {
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 50px;
+        }
+
+        #history-list {
+            text-align: left;
+            max-height: 300px;
+            overflow-y: auto;
+            background: #111;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        #winner-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 500;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        #winner-name { font-size: 6rem; color: var(--neon-blue); text-shadow: 0 0 20px var(--neon-blue); }
+    </style>
+</head>
+<body>
+
+    <div id="screen-home" class="screen active">
+        <h1>Name Picker</h1>
+        <h2>Marie's Creative Classroom</h2>
+        <div class="card">
+            <div class="menu-grid">
+                <button class="btn" onclick="showScreen('screen-picker')"><span>🎡</span>NAME PICKER</button>
+                <button class="btn" style="background: #3498DB" onclick="showScreen('screen-edit')"><span>📝</span>EDIT LIST</button>
+                <button class="btn" style="background: var(--accent); color: black;" onclick="showScreen('screen-history')"><span>📜</span>LIST HISTORY</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-picker" class="screen">
+        <button class="btn btn-small" style="position:absolute; top:20px; left:20px" onclick="showScreen('screen-home')">⬅ Home</button>
+        <h1>Pick a Theme</h1>
+        <div class="card">
+            <div id="theme-selection-grid" class="theme-grid"></div>
+        </div>
+    </div>
+
+    <div id="screen-edit" class="screen">
+        <h1>Edit Students</h1>
+        <div class="card">
+            <textarea id="name-input" style="width:100%; height:150px; padding:10px; border-radius:10px; background:#111; color:white; border:1px solid #555;">Alex, Maria, John, Sarah, Ken, Yuki</textarea>
+            <div id="url-container" style="margin: 10px 0; font-size: 0.8rem; word-break: break-all; color: var(--neon-blue);"></div>
+            <div style="margin-top:20px; display:flex; gap:10px; justify-content:center;">
+                <button class="btn btn-small" onclick="saveNames()">Save & Update</button>
+                <button class="btn btn-small" style="background:var(--neon-pink)" onclick="generateLink()">Generate Link</button>
+                <button class="btn btn-small" onclick="showScreen('screen-home')">Back</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-history" class="screen">
+        <h1>History</h1>
+        <div class="card">
+            <div id="history-list">No names picked yet this session.</div>
+            <button class="btn btn-small" style="margin-top:20px" onclick="showScreen('screen-home')">Back</button>
+        </div>
+    </div>
+
+    <div id="screen-game" class="screen">
+        <button class="btn btn-small" style="position:absolute; top:20px; left:20px" onclick="showScreen('screen-picker')">⬅ Back</button>
+        <h2 id="current-theme-title" style="color:var(--neon-blue); font-size: 2rem;">Theme</h2>
+        <canvas id="gameCanvas"></canvas>
+        
+        <div class="game-controls">
+            <label style="cursor:pointer; font-size: 1.2rem;">
+                <input type="checkbox" id="remove-toggle" checked> Remove after picking
+            </label>
+            <button class="btn" id="pick-btn" onclick="startPicking()">GO!</button>
+        </div>
+    </div>
+
+    <div id="winner-overlay" onclick="this.style.display='none'">
+        <h3 style="font-size: 2rem;">THE CHOSEN ONE:</h3>
+        <div id="winner-name">NAME</div>
+        <p>Tap to close</p>
+    </div>
+
+    <script>
         // --- DATA STATE ---
         let students = ["Alex", "Maria", "John", "Sarah", "Ken", "Yuki"];
         let pool = [...students];
@@ -20,29 +212,7 @@
             { id: 'lava', name: 'Lava Jump', color: '#D35400' }
         ];
 
-        // --- NAVIGATION & URL ---
-        function showScreen(id) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            if(id === 'screen-history') updateHistoryUI();
-        }
-
-        function generateLink() {
-            const val = document.getElementById('name-input').value;
-            const url = window.location.origin + window.location.pathname + '?names=' + encodeURIComponent(val);
-            document.getElementById('url-container').innerText = url;
-            navigator.clipboard.writeText(url);
-            alert("URL Copied to Clipboard!");
-        }
-
-        function saveNames() {
-            const val = document.getElementById('name-input').value;
-            students = val.split(',').map(n => n.trim()).filter(n => n !== "");
-            pool = [...students];
-            alert("List updated!");
-            showScreen('screen-home');
-        }
-
+        // --- INITIALIZATION ---
         window.onload = () => {
             const params = new URLSearchParams(window.location.search);
             if(params.has('names')) {
@@ -66,6 +236,41 @@
             });
         }
 
+        // --- NAVIGATION & UI ---
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if(id === 'screen-history') updateHistoryUI();
+        }
+
+        function generateLink() {
+            const val = document.getElementById('name-input').value;
+            const url = window.location.origin + window.location.pathname + '?names=' + encodeURIComponent(val);
+            document.getElementById('url-container').innerText = url;
+            navigator.clipboard.writeText(url);
+            alert("URL Copied to Clipboard!");
+        }
+
+        function saveNames() {
+            const val = document.getElementById('name-input').value;
+            students = val.split(',').map(n => n.trim()).filter(n => n !== "");
+            pool = [...students];
+            alert("List updated!");
+            showScreen('screen-home');
+        }
+
+        function updateHistoryUI() {
+            const list = document.getElementById('history-list');
+            list.innerHTML = history.length === 0 ? "No names picked yet." : 
+                history.map((n, i) => `<div>${i+1}. <strong>${n}</strong></div>`).reverse().join('');
+        }
+
+        function showWinner(name) {
+            document.getElementById('winner-name').innerText = name;
+            document.getElementById('winner-overlay').style.display = 'flex';
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+        }
+
         function launchGame(theme) {
             currentThemeId = theme.id;
             document.getElementById('current-theme-title').innerText = theme.name;
@@ -74,6 +279,7 @@
             setupCanvas();
         }
 
+        // --- CANVAS LOGIC ---
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
@@ -82,243 +288,6 @@
             canvas.height = 400;
             rotation = 0;
             drawThemeState(currentThemeId, 0, -1);
-        }
-
-        // --- THEME DRAWING FUNCTIONS ---
-
-        function drawThemeState(id, progress, winnerIdx) {
-            ctx.clearRect(0, 0, 600, 400);
-            const ease = 1 - Math.pow(1 - progress, 3);
-
-            switch(id) {
-                case 'wheel':
-                    // Circus Tent Background
-                    ctx.fillStyle = "#800"; ctx.fillRect(0,0,600,400);
-                    for(let i=0; i<12; i++) {
-                        ctx.fillStyle = i%2===0 ? "#a00" : "#d00";
-                        ctx.beginPath(); ctx.moveTo(300,0); ctx.lineTo(i*60,0); ctx.lineTo((i+1)*60,0); ctx.fill();
-                    }
-                    // Vintage Wheel
-                    const wheelAngle = rotation + ( (Math.PI*2*5) * ease );
-                    const sliceAngle = (Math.PI * 2) / pool.length;
-                    ctx.save();
-                    ctx.translate(300, 220);
-                    ctx.rotate(wheelAngle);
-                    // Wood Rim
-                    ctx.strokeStyle = "#5d4037"; ctx.lineWidth = 15;
-                    ctx.beginPath(); ctx.arc(0,0,155,0,Math.PI*2); ctx.stroke();
-                    // Gold Trim
-                    ctx.strokeStyle = "#ffd700"; ctx.lineWidth = 5;
-                    ctx.beginPath(); ctx.arc(0,0,150,0,Math.PI*2); ctx.stroke();
-                    
-                    pool.forEach((name, i) => {
-                        ctx.save();
-                        ctx.rotate(i * sliceAngle);
-                        ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,145,0,sliceAngle);
-                        ctx.fillStyle = i % 2 === 0 ? '#b71c1c' : '#f5f5f5';
-                        ctx.fill();
-                        ctx.fillStyle = i % 2 === 0 ? 'white' : 'black';
-                        ctx.font = "bold 14px Arial";
-                        ctx.textAlign = "right";
-                        ctx.rotate(sliceAngle/2);
-                        ctx.fillText(name, 130, 5);
-                        ctx.restore();
-                    });
-                    ctx.restore();
-                    // Pointer
-                    ctx.fillStyle = "gold";
-                    ctx.beginPath(); ctx.moveTo(300, 60); ctx.lineTo(285, 40); ctx.lineTo(315, 40); ctx.fill();
-                    break;
-
-                case 'archery':
-                    // Grassy Field
-                    ctx.fillStyle = "#4caf50"; ctx.fillRect(0,0,600,400);
-                    ctx.fillStyle = "#8bc34a"; ctx.fillRect(0,250,600,150);
-                    // Target
-                    const colors = ["white","white","black","black","blue","blue","red","red","yellow","yellow"];
-                    colors.forEach((c, i) => {
-                        ctx.fillStyle = c; ctx.beginPath(); ctx.arc(300, 150, 100 - (i*10), 0, Math.PI*2); ctx.fill();
-                    });
-                    // Arrow
-                    if(progress > 0) {
-                        const arrowY = 450 - (300 * ease);
-                        const scale = 1 - (0.5 * ease);
-                        ctx.save();
-                        ctx.translate(300, arrowY);
-                        ctx.scale(scale, scale);
-                        ctx.strokeStyle = "brown"; ctx.lineWidth = 4;
-                        ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0, 40); ctx.stroke();
-                        ctx.fillStyle = "#eee"; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-5,10); ctx.lineTo(5,10); ctx.fill();
-                        if(progress >= 1) {
-                            ctx.fillStyle = "black"; ctx.font = "bold 20px Arial";
-                            ctx.textAlign = "center"; ctx.fillText(pool[winnerIdx], 0, -20);
-                        }
-                        ctx.restore();
-                    }
-                    break;
-
-                case 'fishing':
-                    ctx.fillStyle = "#006994"; ctx.fillRect(0,0,600,400);
-                    // Bubbles
-                    for(let i=0; i<5; i++) {
-                        ctx.strokeStyle = "rgba(255,255,255,0.3)";
-                        ctx.beginPath(); ctx.arc(100+i*100, 400-(progress*500+i*20)%400, 10, 0, Math.PI*2); ctx.stroke();
-                    }
-                    // Fish
-                    pool.forEach((name, i) => {
-                        const x = (i * 100 + progress * 200) % 700 - 50;
-                        const y = 200 + Math.sin(progress * 5 + i) * 50;
-                        ctx.fillStyle = "orange";
-                        ctx.beginPath(); ctx.ellipse(x, y, 30, 15, 0, 0, Math.PI*2); ctx.fill();
-                        ctx.beginPath(); ctx.moveTo(x-30, y); ctx.lineTo(x-45, y-10); ctx.lineTo(x-45, y+10); ctx.fill();
-                        ctx.fillStyle = "white"; ctx.font = "12px Arial"; ctx.fillText(name, x-20, y+5);
-                        // Hook logic
-                        if(i === winnerIdx && progress > 0.5) {
-                            const hookY = -100 + (y + 100) * (progress);
-                            ctx.strokeStyle = "silver"; ctx.lineWidth = 3;
-                            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, y); ctx.stroke();
-                            ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI); ctx.stroke();
-                        }
-                    });
-                    break;
-
-                case 'hacker':
-                    ctx.fillStyle = "black"; ctx.fillRect(0,0,600,400);
-                    ctx.fillStyle = "#0f0"; ctx.font = "15px monospace";
-                    for(let i=0; i<20; i++) {
-                        ctx.globalAlpha = Math.random();
-                        ctx.fillText(Math.random().toString(36).substring(2,7), i*30, (progress*1000 + i*50)%400);
-                    }
-                    ctx.globalAlpha = 1;
-                    const displayIdx = Math.floor(Math.random() * pool.length);
-                    ctx.font = "bold 40px monospace";
-                    ctx.textAlign = "center";
-                    ctx.shadowBlur = 15; ctx.shadowColor = "#0f0";
-                    ctx.fillText(progress < 0.9 ? pool[displayIdx] : pool[winnerIdx], 300, 200);
-                    ctx.shadowBlur = 0;
-                    break;
-
-                case 'space':
-                    ctx.fillStyle = "#000033"; ctx.fillRect(0,0,600,400);
-                    // Stars
-                    ctx.fillStyle = "white";
-                    for(let i=0; i<50; i++) ctx.fillRect((i*137)%600, (i*149)%400, 2, 2);
-                    // Launchpad
-                    ctx.fillStyle = "gray"; ctx.fillRect(0, 350, 600, 50);
-                    // Rockets
-                    pool.slice(0, 10).forEach((name, i) => {
-                        const isWinner = i === winnerIdx;
-                        let rx = 60 + i * 55;
-                        let ry = 320;
-                        if(isWinner && progress > 0.2) {
-                            ry -= (progress-0.2) * 500;
-                            // Fire
-                            ctx.fillStyle = "orange"; ctx.beginPath(); ctx.moveTo(rx, ry+30); ctx.lineTo(rx-10, ry+60); ctx.lineTo(rx+10, ry+60); ctx.fill();
-                        } else if(progress > 0) {
-                            rx += Math.sin(progress*50) * 2;
-                        }
-                        ctx.fillStyle = "silver"; ctx.fillRect(rx-10, ry, 20, 30);
-                        ctx.fillStyle = "red"; ctx.beginPath(); ctx.moveTo(rx-10, ry); ctx.lineTo(rx, ry-15); ctx.lineTo(rx+10, ry); ctx.fill();
-                        if(isWinner && progress > 0.5) {
-                            ctx.fillStyle = "white"; ctx.fillRect(rx+20, ry, 80, 25);
-                            ctx.fillStyle = "black"; ctx.font = "12px Arial"; ctx.fillText(name, rx+25, ry+17);
-                        }
-                    });
-                    break;
-
-                case 'crane':
-                    ctx.fillStyle = "#333"; ctx.fillRect(0,0,600,400);
-                    ctx.strokeStyle = "#555"; ctx.lineWidth = 10; ctx.strokeRect(20,20,560,360);
-                    // Capsules
-                    for(let i=0; i<15; i++) {
-                        ctx.fillStyle = `hsl(${i*45}, 70%, 60%)`;
-                        ctx.beginPath(); ctx.arc(100+i*30, 340, 20, 0, Math.PI*2); ctx.fill();
-                    }
-                    // Claw
-                    let cx = 100 + (400 * ease);
-                    let cy = 50;
-                    if(progress > 0.7) cy += (progress - 0.7) * 400;
-                    ctx.strokeStyle = "silver"; ctx.lineWidth = 5;
-                    ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, cy); ctx.stroke();
-                    ctx.beginPath(); ctx.moveTo(cx-20, cy+20); ctx.quadraticCurveTo(cx, cy, cx+20, cy+20); ctx.stroke();
-                    if(progress >= 1) {
-                        ctx.fillStyle = "white"; ctx.font = "bold 24px Arial"; ctx.textAlign = "center";
-                        ctx.fillText(pool[winnerIdx], cx, cy - 20);
-                    }
-                    break;
-
-                case 'sword':
-                    ctx.fillStyle = "#1b5e20"; ctx.fillRect(0,0,600,400); // Forest
-                    ctx.fillStyle = "#424242"; ctx.beginPath(); ctx.ellipse(300, 350, 100, 60, 0, 0, Math.PI*2); ctx.fill(); // Stone
-                    // Sword
-                    ctx.save();
-                    ctx.translate(300, 300 - (progress * 150));
-                    if(progress > 0 && progress < 1) ctx.rotate(Math.sin(progress*100)*0.05);
-                    ctx.fillStyle = "silver"; ctx.fillRect(-5, -100, 10, 100); // Blade
-                    ctx.fillStyle = "#ffd700"; ctx.fillRect(-20, -100, 40, 10); // Guard
-                    ctx.fillRect(-5, -120, 10, 20); // Handle
-                    if(progress > 0.8) {
-                        ctx.shadowBlur = 20; ctx.shadowColor = "white";
-                        ctx.fillStyle = "white"; ctx.font = "bold 30px serif"; ctx.textAlign = "center";
-                        ctx.fillText(pool[winnerIdx], 0, -140);
-                    }
-                    ctx.restore();
-                    break;
-
-                case 'vending':
-                    ctx.fillStyle = "#2196f3"; ctx.fillRect(150, 50, 300, 300); // Machine
-                    ctx.fillStyle = "black"; ctx.fillRect(170, 70, 260, 200); // Glass
-                    // Snacks
-                    pool.slice(0, 6).forEach((name, i) => {
-                        let sx = 200 + (i%3)*70;
-                        let sy = 100 + Math.floor(i/3)*80;
-                        let sOffset = (i === winnerIdx && progress > 0.5) ? (progress-0.5)*300 : 0;
-                        ctx.fillStyle = "orange"; ctx.fillRect(sx, sy + sOffset, 40, 50);
-                        ctx.fillStyle = "white"; ctx.font = "10px Arial"; ctx.fillText(name.substring(0,5), sx+5, sy+25+sOffset);
-                        // Spiral
-                        ctx.strokeStyle = "white"; ctx.beginPath(); ctx.arc(sx+20, sy+50, 15, 0, Math.PI + (progress*10)); ctx.stroke();
-                    });
-                    break;
-
-                case 'ninja':
-                    ctx.fillStyle = "#d7ccc8"; ctx.fillRect(0,0,600,400); // Wood wall
-                    for(let i=0; i<10; i++) { ctx.strokeStyle="#bcaaa4"; ctx.strokeRect(0, i*40, 600, 40); }
-                    // Shuriken
-                    let nx = progress * 800 - 200;
-                    if(nx > 300) nx = 300;
-                    ctx.save();
-                    ctx.translate(nx, 200);
-                    if(nx < 300) ctx.rotate(progress * 50);
-                    ctx.fillStyle = "#444";
-                    for(let i=0; i<4; i++) { ctx.rotate(Math.PI/2); ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(20,5); ctx.lineTo(20,-5); ctx.fill(); }
-                    ctx.restore();
-                    // Scroll
-                    if(nx >= 300) {
-                        ctx.fillStyle = "#fff9c4"; ctx.fillRect(300, 180, 150 * (progress > 0.6 ? (progress-0.6)*2.5 : 0), 40);
-                        if(progress > 0.9) {
-                            ctx.fillStyle = "black"; ctx.font = "bold 18px cursive"; ctx.fillText(pool[winnerIdx], 320, 207);
-                        }
-                    }
-                    break;
-
-                case 'lava':
-                    ctx.fillStyle = "#3e2723"; ctx.fillRect(0,0,600,400); // Cavern
-                    ctx.fillStyle = "#ff3d00"; ctx.fillRect(0,350,600,50); // Lava
-                    // Stones
-                    for(let i=0; i<5; i++) {
-                        ctx.fillStyle = (i === 4 && progress > 0.9) ? "gold" : "#757575";
-                        ctx.beginPath(); ctx.ellipse(100 + i*100, 320, 40, 20, 0, 0, Math.PI*2); ctx.fill();
-                    }
-                    // Character Jump
-                    let jumpX = progress * 400 + 100;
-                    let jumpY = 300 - Math.abs(Math.sin(progress * 12)) * 80;
-                    ctx.fillStyle = "cyan"; ctx.fillRect(jumpX - 10, jumpY - 20, 20, 20);
-                    if(progress >= 1) {
-                        ctx.fillStyle = "white"; ctx.font = "bold 20px Arial"; ctx.textAlign = "center";
-                        ctx.fillText(pool[winnerIdx], 500, 280);
-                    }
-                    break;
-            }
         }
 
         async function startPicking() {
@@ -348,17 +317,120 @@
             });
         }
 
-        function varColor(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+        // --- THEME DRAWING CORE ---
+        function drawThemeState(id, progress, winnerIdx) {
+            ctx.clearRect(0, 0, 600, 400);
+            const ease = 1 - Math.pow(1 - progress, 3);
 
-        function showWinner(name) {
-            document.getElementById('winner-name').innerText = name;
-            document.getElementById('winner-overlay').style.display = 'flex';
-            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-        }
+            switch(id) {
+                case 'wheel':
+                    ctx.fillStyle = "#800"; ctx.fillRect(0,0,600,400);
+                    for(let i=0; i<12; i++) {
+                        ctx.fillStyle = i%2===0 ? "#a00" : "#d00";
+                        ctx.beginPath(); ctx.moveTo(300,0); ctx.lineTo(i*60,0); ctx.lineTo((i+1)*60,0); ctx.fill();
+                    }
+                    const wheelAngle = rotation + ( (Math.PI*2*5) * ease );
+                    const sliceAngle = (Math.PI * 2) / pool.length;
+                    ctx.save();
+                    ctx.translate(300, 220); ctx.rotate(wheelAngle);
+                    ctx.strokeStyle = "#5d4037"; ctx.lineWidth = 15; ctx.beginPath(); ctx.arc(0,0,155,0,Math.PI*2); ctx.stroke();
+                    pool.forEach((name, i) => {
+                        ctx.save(); ctx.rotate(i * sliceAngle);
+                        ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,145,0,sliceAngle);
+                        ctx.fillStyle = i % 2 === 0 ? '#b71c1c' : '#f5f5f5'; ctx.fill();
+                        ctx.fillStyle = i % 2 === 0 ? 'white' : 'black'; ctx.font = "bold 14px Arial"; ctx.textAlign = "right";
+                        ctx.rotate(sliceAngle/2); ctx.fillText(name, 130, 5); ctx.restore();
+                    });
+                    ctx.restore();
+                    ctx.fillStyle = "gold"; ctx.beginPath(); ctx.moveTo(300, 60); ctx.lineTo(285, 40); ctx.lineTo(315, 40); ctx.fill();
+                    break;
 
-        function updateHistoryUI() {
-            const list = document.getElementById('history-list');
-            list.innerHTML = history.length === 0 ? "No names picked yet." : 
-                history.map((n, i) => `<div>${i+1}. <strong>${n}</strong></div>`).reverse().join('');
+                case 'archery':
+                    ctx.fillStyle = "#4caf50"; ctx.fillRect(0,0,600,400);
+                    ctx.fillStyle = "#8bc34a"; ctx.fillRect(0,250,600,150);
+                    const colors = ["white","white","black","black","blue","blue","red","red","yellow","yellow"];
+                    colors.forEach((c, i) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(300, 150, 100 - (i*10), 0, Math.PI*2); ctx.fill(); });
+                    if(progress > 0) {
+                        const arrowY = 450 - (300 * ease);
+                        ctx.save(); ctx.translate(300, arrowY); ctx.scale(1-(0.5*ease), 1-(0.5*ease));
+                        ctx.strokeStyle = "brown"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0, 40); ctx.stroke();
+                        if(progress >= 1) { ctx.fillStyle = "black"; ctx.font = "bold 20px Arial"; ctx.textAlign = "center"; ctx.fillText(pool[winnerIdx], 0, -20); }
+                        ctx.restore();
+                    }
+                    break;
+
+                case 'fishing':
+                    ctx.fillStyle = "#006994"; ctx.fillRect(0,0,600,400);
+                    pool.forEach((name, i) => {
+                        const x = (i * 100 + progress * 200) % 700 - 50;
+                        const y = 200 + Math.sin(progress * 5 + i) * 50;
+                        ctx.fillStyle = "orange"; ctx.beginPath(); ctx.ellipse(x, y, 30, 15, 0, 0, Math.PI*2); ctx.fill();
+                        ctx.fillStyle = "white"; ctx.font = "12px Arial"; ctx.fillText(name, x-20, y+5);
+                        if(i === winnerIdx && progress > 0.5) {
+                            ctx.strokeStyle = "silver"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, y); ctx.stroke();
+                        }
+                    });
+                    break;
+
+                case 'hacker':
+                    ctx.fillStyle = "black"; ctx.fillRect(0,0,600,400);
+                    ctx.fillStyle = "#0f0"; ctx.font = "15px monospace";
+                    for(let i=0; i<20; i++) { ctx.globalAlpha = Math.random(); ctx.fillText(Math.random().toString(36).substring(2,7), i*30, (progress*1000 + i*50)%400); }
+                    ctx.globalAlpha = 1; ctx.font = "bold 40px monospace"; ctx.textAlign = "center";
+                    ctx.fillText(progress < 0.9 ? pool[Math.floor(Math.random()*pool.length)] : pool[winnerIdx], 300, 200);
+                    break;
+
+                case 'space':
+                    ctx.fillStyle = "#000033"; ctx.fillRect(0,0,600,400);
+                    ctx.fillStyle = "gray"; ctx.fillRect(0, 350, 600, 50);
+                    pool.slice(0, 10).forEach((name, i) => {
+                        const isWin = i === winnerIdx; let rx = 60+i*55, ry = 320;
+                        if(isWin && progress > 0.2) { ry -= (progress-0.2)*500; ctx.fillStyle="orange"; ctx.fillRect(rx-5, ry+30, 10, 20); }
+                        ctx.fillStyle = "silver"; ctx.fillRect(rx-10, ry, 20, 30);
+                        if(isWin && progress > 0.5) { ctx.fillStyle="white"; ctx.fillRect(rx+20, ry, 80, 20); ctx.fillStyle="black"; ctx.fillText(name, rx+25, ry+15); }
+                    });
+                    break;
+
+                case 'crane':
+                    ctx.fillStyle = "#333"; ctx.fillRect(0,0,600,400);
+                    let cx = 100 + (400 * ease), cy = 50 + (progress > 0.7 ? (progress-0.7)*400 : 0);
+                    ctx.strokeStyle = "silver"; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, cy); ctx.stroke();
+                    if(progress >= 1) { ctx.fillStyle = "white"; ctx.font = "24px Arial"; ctx.textAlign="center"; ctx.fillText(pool[winnerIdx], cx, cy-20); }
+                    break;
+
+                case 'sword':
+                    ctx.fillStyle = "#1b5e20"; ctx.fillRect(0,0,600,400);
+                    ctx.save(); ctx.translate(300, 300 - (progress * 150));
+                    ctx.fillStyle = "silver"; ctx.fillRect(-5, -100, 10, 100);
+                    if(progress > 0.8) { ctx.fillStyle="white"; ctx.font="30px serif"; ctx.textAlign="center"; ctx.fillText(pool[winnerIdx], 0, -140); }
+                    ctx.restore();
+                    break;
+
+                case 'vending':
+                    ctx.fillStyle = "#2196f3"; ctx.fillRect(150, 50, 300, 300);
+                    pool.slice(0, 6).forEach((name, i) => {
+                        let sx = 200+(i%3)*70, sy = 100+Math.floor(i/3)*80, off = (i===winnerIdx && progress>0.5) ? (progress-0.5)*300 : 0;
+                        ctx.fillStyle = "orange"; ctx.fillRect(sx, sy+off, 40, 50);
+                    });
+                    break;
+
+                case 'ninja':
+                    ctx.fillStyle = "#d7ccc8"; ctx.fillRect(0,0,600,400);
+                    let nx = Math.min(progress*800-200, 300);
+                    ctx.save(); ctx.translate(nx, 200); if(nx<300) ctx.rotate(progress*50);
+                    ctx.fillStyle="#444"; ctx.fillRect(-15,-15,30,30); ctx.restore();
+                    if(nx>=300 && progress>0.8) { ctx.fillStyle="black"; ctx.font="20px cursive"; ctx.fillText(pool[winnerIdx], 320, 210); }
+                    break;
+
+                case 'lava':
+                    ctx.fillStyle = "#3e2723"; ctx.fillRect(0,0,600,400);
+                    ctx.fillStyle = "#ff3d00"; ctx.fillRect(0,350,600,50);
+                    let jx = progress*400+100, jy = 300 - Math.abs(Math.sin(progress*12))*80;
+                    ctx.fillStyle = "cyan"; ctx.fillRect(jx-10, jy-20, 20, 20);
+                    if(progress>=1) { ctx.fillStyle="white"; ctx.fillText(pool[winnerIdx], 500, 280); }
+                    break;
+            }
         }
     </script>
+</body>
+</html>
