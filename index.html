@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Name Picker - Marie's Creative Classroom</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --neon-pink: #FF0055;
+            --neon-blue: #00FFCC;
+            --bg-dark: #121212;
+            --panel-bg: #1e1e1e;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Comic Sans MS", "Chalkboard SE", cursive, sans-serif;
+            background-color: var(--bg-dark);
+            color: white;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* --- SETUP SCREEN --- */
+        #setup-screen {
+            position: absolute;
+            inset: 0;
+            background: var(--bg-dark);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 20px;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 600px;
+            background: var(--panel-bg);
+            padding: 30px;
+            border-radius: 20px;
+            border: 4px solid var(--neon-blue);
+            box-shadow: 0 0 20px var(--neon-blue);
+            text-align: center;
+        }
+
+        h1 { font-size: 3rem; margin-bottom: 0; color: var(--neon-pink); text-shadow: 2px 2px #000; }
+        h2 { font-size: 1.2rem; margin-top: 5px; opacity: 0.8; }
+
+        textarea {
+            width: 100%;
+            height: 150px;
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            border: none;
+            background: #333;
+            color: #fff;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            border: none;
+            border-radius: 50px;
+            background: var(--neon-pink);
+            color: white;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-family: inherit;
+        }
+
+        .btn:hover { transform: scale(1.05); box-shadow: 0 0 15px var(--neon-pink); }
+
+        /* --- THEME SELECTION --- */
+        #main-app { display: none; flex: 1; flex-direction: column; }
+
+        header {
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0,0,0,0.5);
+        }
+
+        #theme-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .theme-card {
+            background: #252525;
+            border: 2px solid #444;
+            padding: 20px;
+            border-radius: 15px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .theme-card:hover { border-color: var(--neon-blue); transform: translateY(-5px); background: #333; }
+
+        /* --- GAME CANVAS AREA --- */
+        #game-stage {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background: black;
+            z-index: 50;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        canvas { max-width: 100%; max-height: 80vh; }
+
+        /* --- WINNER OVERLAY --- */
+        #winner-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 200;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        #winner-name {
+            font-size: 8rem;
+            color: var(--neon-blue);
+            text-shadow: 0 0 30px var(--neon-blue);
+            margin: 20px;
+            animation: pulse 1s infinite alternate;
+        }
+
+        @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.1); } }
+
+        /* --- UI HELPERS --- */
+        .controls { position: fixed; bottom: 20px; right: 20px; z-index: 300; display: flex; gap: 10px; }
+        .back-btn { position: fixed; top: 20px; left: 20px; z-index: 300; }
+        .settings-bar { font-size: 0.9rem; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <div id="setup-screen">
+        <div class="container">
+            <h1>Name Picker</h1>
+            <h2>Marie's Creative Classroom</h2>
+            <textarea id="name-input" placeholder="Enter student names separated by commas (e.g. Alex, Maria, Ken)..."></textarea>
+            <div class="settings-bar">
+                <label><input type="checkbox" id="remove-picked" checked> Remove name after picking</label>
+            </div>
+            <br>
+            <button class="btn" onclick="saveAndStart()">Generate & Start! 🚀</button>
+        </div>
+    </div>
+
+    <div id="main-app">
+        <header>
+            <div style="font-size: 1.5rem; color: var(--neon-pink)">Marie's Classroom</div>
+            <button class="btn" style="font-size: 1rem;" onclick="editNames()">Edit Names</button>
+        </header>
+        <div id="theme-grid">
+            </div>
+    </div>
+
+    <div id="game-stage">
+        <button class="btn back-btn" onclick="exitGame()">⬅ Back</button>
+        <h2 id="theme-title" style="position:absolute; top: 20px; color: var(--neon-blue);"></h2>
+        <canvas id="gameCanvas"></canvas>
+        <div id="game-ui" style="margin-top: 20px;">
+            <button class="btn" id="action-btn" onclick="runThemeLogic()">CLICK TO PICK!</button>
+        </div>
+    </div>
+
+    <div id="winner-overlay" onclick="closeWinner()">
+        <h3 style="color: white; font-size: 2rem;">THE WINNER IS...</h3>
+        <div id="winner-name">NAME</div>
+        <p>Click anywhere to continue</p>
+    </div>
+
+    <div class="controls">
+        <button class="btn" style="padding: 10px;" onclick="toggleMute()" id="mute-btn">🔊</button>
+    </div>
+
+    <script>
+        // --- DATA & STATE ---
+        let students = [];
+        let pool = [];
+        let isMuted = false;
+        let currentTheme = null;
+        let isAnimating = false;
+
+        const themes = [
+            { id: 'wheel', name: '🎡 Wheel of Names' },
+            { id: 'archery', name: '🏹 Bullseye Archery' },
+            { id: 'fishing', name: '🎣 Deep Sea Fishing' },
+            { id: 'hacker', name: '💻 Cyberpunk Hacker' },
+            { id: 'space', name: '🚀 Space Launch' },
+            { id: 'crane', name: '🏗️ The Crane Game' },
+            { id: 'sword', name: '🗡️ Sword in Stone' },
+            { id: 'vending', name: '🥤 Vending Machine' },
+            { id: 'ninja', name: '🥷 Ninja Stars' },
+            { id: 'lava', name: '🌋 Lava Jump' }
+        ];
+
+        // --- CORE LOGIC ---
+        window.onload = () => {
+            const params = new URLSearchParams(window.location.search);
+            if (params.has('students')) {
+                document.getElementById('name-input').value = params.get('students');
+                saveAndStart(true);
+            }
+            renderThemes();
+        };
+
+        function renderThemes() {
+            const grid = document.getElementById('theme-grid');
+            themes.forEach(t => {
+                const card = document.createElement('div');
+                card.className = 'theme-card';
+                card.innerHTML = `<h3>${t.name}</h3>`;
+                card.onclick = () => launchTheme(t.id);
+                grid.appendChild(card);
+            });
+        }
+
+        function saveAndStart(isAuto = false) {
+            const rawNames = document.getElementById('name-input').value;
+            students = rawNames.split(',').map(n => n.trim()).filter(n => n !== "");
+            
+            if (students.length === 0) return alert("Please enter some names!");
+
+            pool = [...students];
+            
+            if (!isAuto) {
+                const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?students=' + encodeURIComponent(students.join(','));
+                window.history.pushState({ path: newUrl }, '', newUrl);
+            }
+
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('main-app').style.display = 'flex';
+        }
+
+        function launchTheme(id) {
+            if (pool.length === 0) {
+                alert("Everyone has been picked! Resetting list...");
+                pool = [...students];
+            }
+            currentTheme = id;
+            document.getElementById('main-app').style.display = 'none';
+            document.getElementById('game-stage').style.display = 'flex';
+            document.getElementById('theme-title').innerText = themes.find(t => t.id === id).name;
+            initCanvas();
+        }
+
+        function exitGame() {
+            document.getElementById('game-stage').style.display = 'none';
+            document.getElementById('main-app').style.display = 'flex';
+            currentTheme = null;
+        }
+
+        function editNames() {
+            document.getElementById('main-app').style.display = 'none';
+            document.getElementById('setup-screen').style.display = 'flex';
+        }
+
+        // --- AUDIO ENGINE ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(freq, type, duration) {
+            if (isMuted) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            document.getElementById('mute-btn').innerText = isMuted ? '🔇' : '🔊';
+        }
+
+        // --- THEME RENDERERS (Canvas) ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function initCanvas() {
+            canvas.width = 600;
+            canvas.height = 400;
+            drawPlaceholder();
+        }
+
+        function drawPlaceholder() {
+            ctx.clearRect(0,0,600,400);
+            ctx.fillStyle = "#333";
+            ctx.roundRect(50, 50, 500, 300, 20);
+            ctx.fill();
+            ctx.fillStyle = "white";
+            ctx.textAlign = "center";
+            ctx.font = "30px Comic Sans MS";
+            ctx.fillText("READY TO PICK?", 300, 200);
+        }
+
+        async function runThemeLogic() {
+            if (isAnimating) return;
+            isAnimating = true;
+            
+            const winnerIndex = Math.floor(Math.random() * pool.length);
+            const winner = pool[winnerIndex];
+
+            // Simulation of different theme durations
+            await performAnimation(currentTheme);
+
+            showWinner(winner, winnerIndex);
+        }
+
+        async function performAnimation(id) {
+            // Visual feedback based on theme
+            let frames = 0;
+            return new Promise(resolve => {
+                const anim = () => {
+                    frames++;
+                    ctx.clearRect(0,0,600,400);
+                    
+                    if (id === 'wheel') {
+                        ctx.save();
+                        ctx.translate(300, 200);
+                        ctx.rotate(frames * 0.2);
+                        for(let i=0; i<8; i++) {
+                            ctx.fillStyle = i % 2 === 0 ? '#FF0055' : '#00FFCC';
+                            ctx.beginPath();
+                            ctx.moveTo(0,0);
+                            ctx.arc(0,0, 150, i * Math.PI/4, (i+1)*Math.PI/4);
+                            ctx.fill();
+                        }
+                        ctx.restore();
+                        ctx.fillStyle = "white"; ctx.beginPath(); ctx.moveTo(450, 200); ctx.lineTo(480, 190); ctx.lineTo(480, 210); ctx.fill();
+                    } else if (id === 'hacker') {
+                        ctx.fillStyle = "#0F0";
+                        ctx.font = "14px monospace";
+                        for(let i=0; i<20; i++) ctx.fillText(Math.random().toString(16), Math.random()*600, (frames * 5 + i*20) % 400);
+                    } else if (id === 'space') {
+                        ctx.fillStyle = "orange";
+                        ctx.beginPath(); ctx.arc(300, 400 - (frames*4 % 400), 20 + Math.random()*10, 0, Math.PI*2); ctx.fill();
+                    } else {
+                        // Generic Loader for others in this demo logic
+                        ctx.strokeStyle = varColor('--neon-blue');
+                        ctx.lineWidth = 10;
+                        ctx.beginPath(); ctx.arc(300, 200, 50, 0, (frames/20) % (Math.PI*2)); ctx.stroke();
+                    }
+
+                    if(frames % 5 === 0) playSound(200 + (frames*2), 'square', 0.05);
+
+                    if (frames < 100) requestAnimationFrame(anim);
+                    else resolve();
+                };
+                anim();
+            });
+        }
+
+        function varColor(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+        function showWinner(name, index) {
+            isAnimating = false;
+            playSound(523.25, 'triangle', 0.1); // C5
+            setTimeout(() => playSound(659.25, 'triangle', 0.1), 100); // E5
+            setTimeout(() => playSound(783.99, 'triangle', 0.3), 200); // G5
+
+            document.getElementById('winner-name').innerText = name;
+            document.getElementById('winner-overlay').style.display = 'flex';
+            
+            confetti({
+                particleCount: 150,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#FF0055', '#00FFCC', '#FFFFFF']
+            });
+
+            if (document.getElementById('remove-picked').checked) {
+                pool.splice(index, 1);
+            }
+        }
+
+        function closeWinner() {
+            document.getElementById('winner-overlay').style.display = 'none';
+            drawPlaceholder();
+        }
+
+    </script>
+</body>
+</html>
