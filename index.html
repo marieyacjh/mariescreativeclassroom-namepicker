@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Marie's Creative Classroom</title>
+    <title>Random Name Picker - Marie's Creative Classroom</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         :root {
@@ -17,7 +17,7 @@
         * { box-sizing: border-box; }
         body {
             margin: 0; padding: 0;
-            font-family: "Comic Sans MS", "Chalkboard SE", cursive, sans-serif;
+            font-family: "Comic Sans MS", "Chalkboard SE";
             background-color: var(--bg-dark);
             color: white;
             overflow: hidden;
@@ -32,6 +32,7 @@
             align-items: center;
             justify-content: center;
             padding: 20px;
+            transition: background-color 0.5s ease;
         }
 
         .active { display: flex; }
@@ -94,14 +95,14 @@
         }
         .theme-item:hover { border-color: var(--neon-blue); background: #333; }
 
-        canvas { max-width: 100%; max-height: 60vh; border-radius: 10px; background: #000; }
+        canvas { max-width: 100%; max-height: 60vh; border-radius: 10px; background: transparent; }
         
         .game-controls {
             margin-top: 15px;
             display: flex;
             align-items: center;
             gap: 20px;
-            background: rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.5);
             padding: 15px;
             border-radius: 50px;
         }
@@ -119,7 +120,8 @@
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.95);
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
             z-index: 500;
             flex-direction: column;
             align-items: center;
@@ -131,7 +133,7 @@
 <body>
 
     <div id="screen-home" class="screen active">
-        <h1>Name Picker</h1>
+        <h1 id="display-title">Name Picker</h1>
         <h2>Marie's Creative Classroom</h2>
         <div class="card">
             <div class="menu-grid">
@@ -151,8 +153,9 @@
     </div>
 
     <div id="screen-edit" class="screen">
-        <h1>Edit Students</h1>
+        <h1>Edit List Details</h1>
         <div class="card">
+            <input type="text" id="title-input" placeholder="Enter List Title (e.g. Class 101)" style="width:100%; padding:10px; margin-bottom:10px; border-radius:10px; background:#111; color:white; border:1px solid var(--neon-blue);">
             <textarea id="name-input" style="width:100%; height:150px; padding:10px; border-radius:10px; background:#111; color:white; border:1px solid #555;">Alex, Maria, John, Sarah, Ken, Yuki</textarea>
             <div id="url-container" style="margin: 10px 0; font-size: 0.8rem; word-break: break-all; color: var(--neon-blue);"></div>
             <div style="margin-top:20px; display:flex; gap:10px; justify-content:center;">
@@ -164,7 +167,7 @@
     </div>
 
     <div id="screen-history" class="screen">
-        <h1>History</h1>
+        <h1 id="history-title-display">History</h1>
         <div class="card">
             <div id="history-list">No names picked yet this session.</div>
             <button class="btn btn-small" style="margin-top:20px" onclick="showScreen('screen-home')">Back</button>
@@ -173,7 +176,7 @@
 
     <div id="screen-game" class="screen">
         <button class="btn btn-small" style="position:absolute; top:20px; left:20px" onclick="showScreen('screen-picker')">⬅ Back</button>
-        <h2 id="current-theme-title" style="color:var(--neon-blue); font-size: 2rem;">Theme</h2>
+        <h2 id="current-theme-title" style="color:white; font-size: 2rem; text-shadow: 2px 2px #000;">Theme</h2>
         <canvas id="gameCanvas"></canvas>
         
         <div class="game-controls">
@@ -192,6 +195,7 @@
 
     <script>
         // --- DATA STATE ---
+        let listTitle = "Name Picker";
         let students = ["Alex", "Maria", "John", "Sarah", "Ken", "Yuki"];
         let pool = [...students];
         let history = [];
@@ -200,21 +204,26 @@
         let rotation = 0;
 
         const themes = [
-            { id: 'wheel', name: 'Wheel of Names', color: '#FF0055' },
-            { id: 'archery', name: 'Bullseye Archery', color: '#E74C3C' },
-            { id: 'fishing', name: 'Deep Sea Fishing', color: '#3498DB' },
-            { id: 'hacker', name: 'Cyberpunk Hacker', color: '#2ECC71' },
-            { id: 'space', name: 'Space Launch', color: '#9B59B6' },
-            { id: 'crane', name: 'The Crane Game', color: '#F1C40F' },
-            { id: 'sword', name: 'Sword in Stone', color: '#95A5A6' },
-            { id: 'vending', name: 'Vending Machine', color: '#E67E22' },
-            { id: 'ninja', name: 'Ninja Stars', color: '#2C3E50' },
-            { id: 'lava', name: 'Lava Jump', color: '#D35400' }
+            { id: 'wheel', name: 'Wheel of Names', color: '#800000' },
+            { id: 'archery', name: 'Bullseye Archery', color: '#4caf50' },
+            { id: 'fishing', name: 'Deep Sea Fishing', color: '#006994' },
+            { id: 'hacker', name: 'Cyberpunk Hacker', color: '#000000' },
+            { id: 'space', name: 'Space Launch', color: '#000033' },
+            { id: 'crane', name: 'The Crane Game', color: '#333333' },
+            { id: 'sword', name: 'Sword in Stone', color: '#1b5e20' },
+            { id: 'vending', name: 'Vending Machine', color: '#2196f3' },
+            { id: 'ninja', name: 'Ninja Stars', color: '#d7ccc8' },
+            { id: 'lava', name: 'Lava Jump', color: '#3e2723' }
         ];
 
         // --- INITIALIZATION ---
         window.onload = () => {
             const params = new URLSearchParams(window.location.search);
+            if(params.has('title')) {
+                listTitle = params.get('title');
+                document.getElementById('title-input').value = listTitle;
+                document.getElementById('display-title').innerText = listTitle;
+            }
             if(params.has('names')) {
                 const nameStr = params.get('names');
                 document.getElementById('name-input').value = nameStr;
@@ -238,14 +247,25 @@
 
         // --- NAVIGATION & UI ---
         function showScreen(id) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            if(id === 'screen-history') updateHistoryUI();
+            document.querySelectorAll('.screen').forEach(s => {
+                s.classList.remove('active');
+                s.style.backgroundColor = ""; // Reset background when switching
+            });
+            const activeScreen = document.getElementById(id);
+            activeScreen.classList.add('active');
+            
+            if(id === 'screen-history') {
+                document.getElementById('history-title-display').innerText = listTitle + " History";
+                updateHistoryUI();
+            }
         }
 
         function generateLink() {
             const val = document.getElementById('name-input').value;
-            const url = window.location.origin + window.location.pathname + '?names=' + encodeURIComponent(val);
+            const titleVal = document.getElementById('title-input').value;
+            const url = window.location.origin + window.location.pathname + 
+                        '?title=' + encodeURIComponent(titleVal) + 
+                        '&names=' + encodeURIComponent(val);
             document.getElementById('url-container').innerText = url;
             navigator.clipboard.writeText(url);
             alert("URL Copied to Clipboard!");
@@ -253,9 +273,11 @@
 
         function saveNames() {
             const val = document.getElementById('name-input').value;
+            listTitle = document.getElementById('title-input').value || "Name Picker";
             students = val.split(',').map(n => n.trim()).filter(n => n !== "");
             pool = [...students];
-            alert("List updated!");
+            document.getElementById('display-title').innerText = listTitle;
+            alert("List and Title updated!");
             showScreen('screen-home');
         }
 
@@ -268,13 +290,19 @@
         function showWinner(name) {
             document.getElementById('winner-name').innerText = name;
             document.getElementById('winner-overlay').style.display = 'flex';
-            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+            confetti({ 
+                particleCount: 150, 
+                spread: 70, 
+                origin: { y: 0.6 },
+                backgroundColor: 'transparent' 
+            });
         }
 
         function launchGame(theme) {
             currentThemeId = theme.id;
+            const gameScreen = document.getElementById('screen-game');
+            gameScreen.style.backgroundColor = theme.color;
             document.getElementById('current-theme-title').innerText = theme.name;
-            document.getElementById('current-theme-title').style.color = theme.color;
             showScreen('screen-game');
             setupCanvas();
         }
@@ -324,9 +352,8 @@
 
             switch(id) {
                 case 'wheel':
-                    ctx.fillStyle = "#800"; ctx.fillRect(0,0,600,400);
                     for(let i=0; i<12; i++) {
-                        ctx.fillStyle = i%2===0 ? "#a00" : "#d00";
+                        ctx.fillStyle = i%2===0 ? "rgba(170,0,0,0.5)" : "rgba(221,0,0,0.5)";
                         ctx.beginPath(); ctx.moveTo(300,0); ctx.lineTo(i*60,0); ctx.lineTo((i+1)*60,0); ctx.fill();
                     }
                     const wheelAngle = rotation + ( (Math.PI*2*5) * ease );
@@ -346,8 +373,6 @@
                     break;
 
                 case 'archery':
-                    ctx.fillStyle = "#4caf50"; ctx.fillRect(0,0,600,400);
-                    ctx.fillStyle = "#8bc34a"; ctx.fillRect(0,250,600,150);
                     const colors = ["white","white","black","black","blue","blue","red","red","yellow","yellow"];
                     colors.forEach((c, i) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(300, 150, 100 - (i*10), 0, Math.PI*2); ctx.fill(); });
                     if(progress > 0) {
@@ -360,7 +385,6 @@
                     break;
 
                 case 'fishing':
-                    ctx.fillStyle = "#006994"; ctx.fillRect(0,0,600,400);
                     pool.forEach((name, i) => {
                         const x = (i * 100 + progress * 200) % 700 - 50;
                         const y = 200 + Math.sin(progress * 5 + i) * 50;
@@ -373,7 +397,6 @@
                     break;
 
                 case 'hacker':
-                    ctx.fillStyle = "black"; ctx.fillRect(0,0,600,400);
                     ctx.fillStyle = "#0f0"; ctx.font = "15px monospace";
                     for(let i=0; i<20; i++) { ctx.globalAlpha = Math.random(); ctx.fillText(Math.random().toString(36).substring(2,7), i*30, (progress*1000 + i*50)%400); }
                     ctx.globalAlpha = 1; ctx.font = "bold 40px monospace"; ctx.textAlign = "center";
@@ -381,7 +404,6 @@
                     break;
 
                 case 'space':
-                    ctx.fillStyle = "#000033"; ctx.fillRect(0,0,600,400);
                     ctx.fillStyle = "gray"; ctx.fillRect(0, 350, 600, 50);
                     pool.slice(0, 10).forEach((name, i) => {
                         const isWin = i === winnerIdx; let rx = 60+i*55, ry = 320;
@@ -392,14 +414,12 @@
                     break;
 
                 case 'crane':
-                    ctx.fillStyle = "#333"; ctx.fillRect(0,0,600,400);
                     let cx = 100 + (400 * ease), cy = 50 + (progress > 0.7 ? (progress-0.7)*400 : 0);
                     ctx.strokeStyle = "silver"; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, cy); ctx.stroke();
                     if(progress >= 1) { ctx.fillStyle = "white"; ctx.font = "24px Arial"; ctx.textAlign="center"; ctx.fillText(pool[winnerIdx], cx, cy-20); }
                     break;
 
                 case 'sword':
-                    ctx.fillStyle = "#1b5e20"; ctx.fillRect(0,0,600,400);
                     ctx.save(); ctx.translate(300, 300 - (progress * 150));
                     ctx.fillStyle = "silver"; ctx.fillRect(-5, -100, 10, 100);
                     if(progress > 0.8) { ctx.fillStyle="white"; ctx.font="30px serif"; ctx.textAlign="center"; ctx.fillText(pool[winnerIdx], 0, -140); }
@@ -407,7 +427,7 @@
                     break;
 
                 case 'vending':
-                    ctx.fillStyle = "#2196f3"; ctx.fillRect(150, 50, 300, 300);
+                    ctx.fillStyle = "rgba(255,255,255,0.2)"; ctx.fillRect(150, 50, 300, 300);
                     pool.slice(0, 6).forEach((name, i) => {
                         let sx = 200+(i%3)*70, sy = 100+Math.floor(i/3)*80, off = (i===winnerIdx && progress>0.5) ? (progress-0.5)*300 : 0;
                         ctx.fillStyle = "orange"; ctx.fillRect(sx, sy+off, 40, 50);
@@ -415,7 +435,6 @@
                     break;
 
                 case 'ninja':
-                    ctx.fillStyle = "#d7ccc8"; ctx.fillRect(0,0,600,400);
                     let nx = Math.min(progress*800-200, 300);
                     ctx.save(); ctx.translate(nx, 200); if(nx<300) ctx.rotate(progress*50);
                     ctx.fillStyle="#444"; ctx.fillRect(-15,-15,30,30); ctx.restore();
@@ -423,7 +442,6 @@
                     break;
 
                 case 'lava':
-                    ctx.fillStyle = "#3e2723"; ctx.fillRect(0,0,600,400);
                     ctx.fillStyle = "#ff3d00"; ctx.fillRect(0,350,600,50);
                     let jx = progress*400+100, jy = 300 - Math.abs(Math.sin(progress*12))*80;
                     ctx.fillStyle = "cyan"; ctx.fillRect(jx-10, jy-20, 20, 20);
